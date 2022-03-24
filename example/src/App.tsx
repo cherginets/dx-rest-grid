@@ -1,10 +1,11 @@
-import React  from 'react'
-import './index.css';
-import DxRestGrid from 'dx-rest-grid'
+import React, { useState } from 'react'
+import './index.css'
+import DxRestGrid, { DateTimeProvider, DaysProvider, MoneyProvider } from 'dx-rest-grid'
 import 'dx-rest-grid/dist/index.css'
 import { ThemeProvider } from '@mui/material/styles'
 import { theme } from './theme'
 import { Container, Paper, Typography } from '@mui/material'
+import { DxRestGridColumn } from '../../src/DxRestGrid'
 
 type Row = {
   id: number
@@ -14,24 +15,31 @@ type Row = {
 }
 
 const App = () => {
+  const [columns] = useState<Array<DxRestGridColumn>>([
+    { name: 'id', title: 'ID' },
+    { name: 'balance', title: 'Balance' },
+    { name: 'email', title: 'Email' },
+    { name: 'name', title: 'Name' },
+    { name: 'days', title: 'Days' },
+    { name: 'createdAt', title: 'Created At' }
+  ])
+
   return <ThemeProvider theme={theme}>
     <Container>
       <Typography variant={'h4'} style={{marginBottom: 20,}}>Grid when all features enabled</Typography>
       <Paper>
         <DxRestGrid<Row>
           id={'EXAMPLE_TABLE'}
-          columns={[
-            { name: 'name', title: 'Name' },
-            { name: 'gender', title: 'Gender' },
-            { name: 'city', title: 'City' },
-            { name: 'car', title: 'Car' }
-          ]}
+          columns={columns}
           fetchAction={(params) => {
-            return fetchUsers({
-              currentPage: Math.floor(params.offset / params.limit) + 1,
-              pageSize: params.limit + 1,
-            })
+            return fetchUsers(params)
           }}
+          providers={[
+            {for: ['name'], formatterComponent: ({ value }) => <span style={{ color: 'green', fontWeight: 'bold' }}>{value}</span>},
+            {for: ['balance'], ProviderComponent: MoneyProvider},
+            {for: ['days'], ProviderComponent: DaysProvider},
+            {for: ['createdAt'], ProviderComponent: DateTimeProvider},
+          ]}
         />
       </Paper>
     </Container>
@@ -42,25 +50,27 @@ export default App
 
 // region Temporary API
 
-const generatedData: Row[] = new Array(444).fill(null).map((i) => {
-  const id = parseInt(i) + 1;
+const generatedData: Row[] = new Array(444).fill(null).map((_: any, i) => {
+  const id = i + 1;
   return {
     id,
+    days: id,
     balance: Math.floor(Math.random() * 100000),
     email: `test${id}@test.domain`,
-    name: `User N-${id}`
-  }
+    name: `User N-${id}`,
+    createdAt: (new Date(2022, 3, id % 30, id % 23, id % 60, id % 60)).toISOString(),
+}
 });
 
-const fetchUsers = ({ currentPage, pageSize }: {
-  currentPage: number
-  pageSize: number
+const fetchUsers = ({ offset, limit }: {
+  offset: number
+  limit: number
 }) => {
+  console.log('"api" query', { offset, limit });
   const resultRows = [...generatedData];
 
   const total = resultRows.length;
-  const offset = (currentPage - 1) * pageSize;
-  const rows = generatedData.slice(offset, offset + pageSize);
+  const rows = generatedData.slice(offset, offset + limit);
 
   return Promise.resolve({ rows, total })
 }

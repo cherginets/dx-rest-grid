@@ -1,40 +1,57 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  PagingState,
-  IntegratedPaging, Column
+  Column,
+  CustomPaging,
+  DataTypeProvider,
+  DataTypeProviderProps,
+  IntegratedPaging,
+  PagingState, TableColumnVisibility
 } from '@devexpress/dx-react-grid'
-import {
-  Grid,
-  Table,
-  TableHeaderRow,
-  PagingPanel
-} from '@devexpress/dx-react-grid-material-ui'
+import { Plugin } from '@devexpress/dx-react-core'
+import { Grid, Table, TableHeaderRow, PagingPanel, ColumnChooser, Toolbar } from '@devexpress/dx-react-grid-material-ui'
 
-export type DxRestGridProps<T> = {
+export type DxRestGridProviderType = React.ComponentType<DataTypeProviderProps>;
+export type DxRestGridColumn = Column & {
+  provider?: DxRestGridProviderType // todo to detail
+}
+
+export type ProvidersProp = {
+  for: string[],
+  formatterComponent?: React.ComponentType<DataTypeProvider.ValueFormatterProps>
+  ProviderComponent?: React.ComponentType<DataTypeProviderProps>
+  // todo разделить
+}
+
+interface DxRestGridProps<T> {
   id: string
-  columns: Array<Column>
+  columns: Array<DxRestGridColumn>
   fetchAction: (params: { offset: number; limit: number }) => Promise<{
     rows: ReadonlyArray<T>
     total: number
-  }>
+  }>;
+
+  providers?: ProvidersProp[]
 }
 
-function DxRestGrid<Row extends { id: number }>(
-  { id, columns, fetchAction }: DxRestGridProps<Row>
+function DxRestGrid<Row>(
+  { id, columns: _columns, fetchAction, providers }: DxRestGridProps<Row>
 ) {
-
-  console.log('id', id);
+  const { columns } = useMemo<{
+    columns: Array<Column>
+  }>(() => {
+    const columns: Array<Column> = []
+    _columns.forEach(({ name, title, provider }) => {
+      columns.push({ name, title })
+      // providers.push([name, provider])
+    })
+    return { columns }
+  }, [_columns])
 
   // region Pagination
   const [total, setTotal] = useState<number>(0)
   const [offset, setOffset] = useState<number>(0)
   const [limit, setLimit] = useState<number>(2)
   const [pageSizes] = useState<number[]>([2, 10, 50, 100, 500])
-
-  console.log('total', total)
-  console.log('setOffset', setOffset)
-  console.log('setLimit', setLimit)
-  console.log('pageSizes', pageSizes)
   // endregion
 
   // region Data and fetching
@@ -55,11 +72,37 @@ function DxRestGrid<Row extends { id: number }>(
   return (
     <div>
       <Grid rows={rows} columns={columns}>
-        <PagingState defaultCurrentPage={0} pageSize={5} />
-        <IntegratedPaging />
+        {/* region Data Type Providers */}
+        {!!providers && <Plugin>
+          {providers.map(({ ProviderComponent, formatterComponent, ...provider }, i: number) => {
+            if(ProviderComponent) return <ProviderComponent key={i} for={provider.for} />;
+            else return <DataTypeProvider key={i} for={provider.for} formatterComponent={formatterComponent} />
+          })}
+        </Plugin>}
+        {/* endregion */}
+
+        {/* region Pagination */}
+        <PagingState
+          currentPage={offset / limit}
+          onCurrentPageChange={(current) => setOffset(current * limit)}
+          pageSize={limit}
+          onPageSizeChange={(newLimit) => {
+            setOffset(0);
+            setLimit(newLimit)
+          }}
+        />
+        <CustomPaging totalCount={total} />
+        {/* endregion */}
+
         <Table />
+
         <TableHeaderRow />
-        <PagingPanel />
+
+        {/*<TableColumnVisibility {...columnVisibilityProps} />*/}
+        <Toolbar/>
+        {/*<ColumnChooser/>*/}
+
+        <PagingPanel pageSizes={pageSizes}/>
       </Grid>
     </div>
   )
