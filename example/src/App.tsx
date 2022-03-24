@@ -16,7 +16,7 @@ type Row = {
 
 const App = () => {
   const [columns] = useState<Array<DxRestGridColumn>>([
-    { name: 'id', title: 'ID' },
+    { name: 'id', title: 'ID', width: 50 },
     { name: 'balance', title: 'Balance' },
     { name: 'email', title: 'Email' },
     { name: 'name', title: 'Name' },
@@ -31,15 +31,20 @@ const App = () => {
         <DxRestGrid<Row>
           id={'EXAMPLE_TABLE'}
           columns={columns}
+
           fetchAction={(params) => {
             return fetchUsers(params)
           }}
+
           providers={[
-            {for: ['name'], formatterComponent: ({ value }) => <span style={{ color: 'green', fontWeight: 'bold' }}>{value}</span>},
             {for: ['balance'], ProviderComponent: MoneyProvider},
             {for: ['days'], ProviderComponent: DaysProvider},
             {for: ['createdAt'], ProviderComponent: DateTimeProvider},
+            {for: ['name'], formatterComponent: ({ value }) => <span style={{ color: 'green', fontWeight: 'bold' }}>{value}</span>},
           ]}
+
+          enableSorting
+          defaultSorting={[{ columnName: 'days', direction: 'desc' }]}
         />
       </Paper>
     </Container>
@@ -72,7 +77,11 @@ const fetchUsers = ({ offset, limit }: {
   const total = resultRows.length;
   const rows = generatedData.slice(offset, offset + limit);
 
-  return Promise.resolve({ rows, total })
+  return new Promise<any>((resolve) => {
+    setTimeout(() => {
+      resolve({ rows, total })
+    }, 500);
+  })
 }
 
 // endregion
