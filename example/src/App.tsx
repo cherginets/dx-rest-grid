@@ -1,5 +1,5 @@
-import React from 'react'
-
+import React  from 'react'
+import './index.css';
 import DxRestGrid from 'dx-rest-grid'
 import 'dx-rest-grid/dist/index.css'
 import { ThemeProvider } from '@mui/material/styles'
@@ -20,6 +20,12 @@ const App = () => {
       <Paper>
         <DxRestGrid<Row>
           id={'EXAMPLE_TABLE'}
+          columns={[
+            { name: 'name', title: 'Name' },
+            { name: 'gender', title: 'Gender' },
+            { name: 'city', title: 'City' },
+            { name: 'car', title: 'Car' }
+          ]}
           fetchAction={(params) => {
             return fetchUsers({
               currentPage: Math.floor(params.offset / params.limit) + 1,
@@ -56,7 +62,7 @@ const fetchUsers = ({ currentPage, pageSize }: {
   const offset = (currentPage - 1) * pageSize;
   const rows = generatedData.slice(offset, offset + pageSize);
 
-  return Promise.resolve({ rows, total, })
+  return Promise.resolve({ rows, total })
 }
 
 // endregion
