@@ -4,8 +4,7 @@ import {
   CustomPaging,
   DataTypeProvider,
   DataTypeProviderProps,
-  PagingState, Sorting, SortingDirection, SortingState,
-  VirtualTable
+  PagingState, SelectionState, Sorting, SortingState,
 } from '@devexpress/dx-react-grid'
 import { Plugin } from '@devexpress/dx-react-core'
 import {
@@ -15,12 +14,14 @@ import {
   Table,
   TableColumnVisibility,
   TableHeaderRow,
+  TableSelection,
   Toolbar
 } from '@devexpress/dx-react-grid-material-ui'
 import useLocalStorage from './utils/useLocalStorage'
-import { Sync } from '@mui/icons-material'
+import Sync from '@mui/icons-material/Sync'
+import IconButton from '@mui/material/IconButton';
+import { CircularProgress } from '@mui/material'
 
-export type DxRestGridProviderType = React.ComponentType<DataTypeProviderProps>;
 export type DxRestGridColumn = Column & {
   // table column extensions
   width?: number | string;
@@ -52,6 +53,11 @@ interface DxRestGridProps<T> {
 
   enableSorting?: boolean
   defaultSorting?: Sorting[]
+
+  onSelect?: (params: {
+    indexes: Array<number | string>,
+    rows: T[]
+  }) => void
 }
 
 function DxRestGrid<Row>(
@@ -61,6 +67,7 @@ function DxRestGrid<Row>(
   },
     enableSorting = false,
     defaultSorting = [],
+    onSelect
   }: DxRestGridProps<Row>
 ) {
   const {
@@ -141,10 +148,16 @@ function DxRestGrid<Row>(
   }, [fetch])
   // endregion
 
-  console.log('sorting', sorting);
+  // region Selection
+  const canSelect = useMemo(() => !!onSelect, []);
+  const [selection, setSelection] = useState<Array<number | string>>([1]);
+  useEffect(() => {
+    if(onSelect) onSelect({ indexes: selection, rows: rows.filter((row, i) => selection.includes(i)) })
+  }, [selection]);
+  // endregion
 
   return (
-    <div>
+    <div style={{position: "relative"}}>
       <Grid rows={rows} columns={columns}>
         {/* region Data Type Providers */}
         {!!providers && <Plugin>
@@ -168,6 +181,11 @@ function DxRestGrid<Row>(
         <CustomPaging totalCount={total} />
         {/* endregion */}
 
+        {canSelect && <SelectionState
+          selection={selection}
+          onSelectionChange={setSelection}
+        />}
+
         {enableSorting && <SortingState
           sorting={sorting}
           onSortingChange={setSorting}
@@ -177,6 +195,7 @@ function DxRestGrid<Row>(
         <Table columnExtensions={columnExtensions} />
 
         <TableHeaderRow showSortingControls={enableSorting} />
+        {canSelect && <TableSelection/>}
 
         <TableColumnVisibility
           hiddenColumnNames={hiddenColumnNames}
@@ -186,9 +205,7 @@ function DxRestGrid<Row>(
         <Toolbar rootComponent={({children}) => {
           return <Toolbar.Root>
             <div style={{flexGrow: 1, display: 'flex', alignItems:'center', justifyContent: 'flex-end'}}>
-              <button onClick={fetch}>
-                <Sync />
-              </button>
+              <IconButton onClick={fetch}><Sync /></IconButton>
             </div>{children}
           </Toolbar.Root>
         }} />
@@ -196,7 +213,17 @@ function DxRestGrid<Row>(
 
         <PagingPanel pageSizes={pageSizes}/>
       </Grid>
-      {loading && "Загрузка..."}
+      {loading && <div style={{
+        position: 'absolute',
+        background: '#ffffffad',
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        display: 'flex',
+        justifyContent: 'center', paddingTop: 20}}>
+        <CircularProgress />
+      </div>}
     </div>
   )
 }

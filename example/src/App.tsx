@@ -45,6 +45,9 @@ const App = () => {
 
           enableSorting
           defaultSorting={[{ columnName: 'days', direction: 'desc' }]}
+          onSelect={(obj) => {
+            console.log('onSelect', obj);
+          }}
         />
       </Paper>
     </Container>
